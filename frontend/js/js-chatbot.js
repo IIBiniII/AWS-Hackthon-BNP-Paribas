@@ -1,9 +1,30 @@
+
+
+const API_URL = 'http://192.168.43.135:5000/';
+
+function getId() {
+    // 1. On récupère la partie "query string" de l'URL (ex: ?id=CLI00001)
+    const queryString = window.location.search;
+
+    // 2. On crée un objet pour manipuler ces paramètres
+    const urlParams = new URLSearchParams(queryString);
+
+    // 3. On extrait la valeur associée à la clé 'id'
+    const clientId = urlParams.get('id');
+    
+    return clientId;
+}
+
 async function listenButton() {
     // Correction des sélecteurs : on ajoute le "." pour les classes
     const sendButton = document.querySelector(".bottom button");
     const textArea = document.querySelector(".bottom textarea");
     const answerBox = document.querySelector(".answer");
 
+    let url = API_URL+"clients/search?"
+    url+=`client_id=${getId()}&`
+    const response = await fetch(url);
+    // console.log(response);
     // Utilisation de addEventListener au lieu de setAttribute
     sendButton.addEventListener('click', async () => {
         const userMessage = textArea.value.trim();
