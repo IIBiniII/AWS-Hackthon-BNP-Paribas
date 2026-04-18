@@ -1,37 +1,28 @@
 console.log("hello word")
 
-var data = [{
-  "id": "Coo01",
-  "firstName": "Floran",
-  "lastName": "Martel",
-  "dateOfBirth": "2004-07-24",
-  "phone": "+33 6 51 52 54 54",
-  "email": "floran.martel@gmail.com"
-},{
-  "id": "Coo01",
-  "firstName": "Floran",
-  "lastName": "Martel",
-  "dateOfBirth": "2004-07-24",
-  "phone": "+33 6 51 52 54 54",
-  "email": "floran.martel@gmail.com"
-},{
-  "id": "Coo01",
-  "firstName": "Floran",
-  "lastName": "Martel",
-  "dateOfBirth": "2004-07-24",
-  "phone": "+33 6 51 52 54 54",
-  "email": "floran.martel@gmail.com"
-}]
-
-const API_URL = 'https://bnp.com/api/data';
+const API_URL = 'http://192.168.43.135:5000/';
 
 /**
  * 1. FONCTION APPART : Gère uniquement l'appel réseau (Fetch)
  * @returns {Promise<Array>} La liste des clients
  */
-async function fetchClientData() {
+async function fetchClientData(data) {
     try {
-        const response = await fetch(API_URL);
+        let url = API_URL+"clients/accounts?client_id=CLI00001"
+        if (data.id){
+            url+=`client_id=${id}&`
+        }
+        if (data.firstName){
+            url+=`prenom=${firstName}&`
+        }
+        if (data.lastName){
+            url+=`nom=${lastName}&`
+        }
+        if (data.dob){
+            url+=`date_naissance=${dob}`
+        }
+
+        const response = await fetch(url);
         
         if (!response.ok) {
             throw new Error(`Erreur HTTP : ${response.status}`);
@@ -47,13 +38,14 @@ async function fetchClientData() {
 /**
  * 2. FONCTION DE LOGIQUE UI : Gère l'affichage des données
  */
-async function loadClients() {
+async function loadClients(data) {
     console.log("loadClients")
     const container = document.querySelector('.client-list');
+    
 
     try {
         // On appelle la fonction "appart" pour récupérer les données
-        const clients = data;//await fetchClientData();
+        const clients = await fetchClientData(data);
 
         // On vide le conteneur
         container.innerHTML = '';
@@ -75,19 +67,19 @@ async function loadClients() {
  */
 function createClientElement(data) {
     // Formatage de la date : 2004-07-24 -> 24/07/2004
-    const [year, month, day] = data.dateOfBirth.split('-');
+    const [year, month, day] = data.date_naissance.slice(0, text.indexOf("T")).split('-');
     const formattedDate = `${day}/${month}/${year}`;
 
     const div = document.createElement('div');
     div.className = 'client-row';
-    const targetUrl = `clientsummary.html?id=${data.id}`;
+    const targetUrl = `clientsummary.html?id=${data.client_id}`;
 
     div.innerHTML = `
-        <p>id : <span>${data.id}</span></p>
-        <p>first name : <span>${data.firstName}</span></p>
-        <p>last name : <span>${data.lastName}</span></p>
+        <p>id : <span>${data.client_id}</span></p>
+        <p>first name : <span>${data.prenom}</span></p>
+        <p>last name : <span>${data.nom}</span></p>
         <p>date of birth : <span>${formattedDate}</span></p>
-        <p>phone : <span>${data.phone}</span></p>
+        <p>phone : <span>${data.telephone}</span></p>
         <p>email : <span>${data.email}</span></p>
         <a href="${targetUrl}" class="select-link">Select ❯</a>
     `;
