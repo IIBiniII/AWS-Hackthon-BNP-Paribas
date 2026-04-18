@@ -8,18 +8,18 @@ const API_URL = 'http://192.168.43.135:5000/';
  */
 async function fetchClientData(data) {
     try {
-        let url = API_URL+"clients/accounts?client_id=CLI00001"
+        let url = API_URL+"clients/search?"
         if (data.id){
-            url+=`client_id=${id}&`
+            url+=`client_id=${data.id}&`
         }
         if (data.firstName){
-            url+=`prenom=${firstName}&`
+            url+=`prenom=${data.firstName}&`
         }
         if (data.lastName){
-            url+=`nom=${lastName}&`
+            url+=`nom=${data.lastName}&`
         }
         if (data.dob){
-            url+=`date_naissance=${dob}`
+            url+=`date_naissance=${data.dob}`
         }
 
         const response = await fetch(url);
@@ -46,17 +46,18 @@ async function loadClients(data) {
     try {
         // On appelle la fonction "appart" pour récupérer les données
         const clients = await fetchClientData(data);
-
+        console.log(clients);
         // On vide le conteneur
         container.innerHTML = '';
 
         // On crée et injecte chaque ligne client
-        clients.forEach(client => {
+        clients.clients.forEach(client => {
             const clientRow = createClientElement(client);
             container.appendChild(clientRow);
         });
 
     } catch (error) {
+        console.log(error)
         // Gestion de l'affichage en cas d'erreur
         container.innerHTML = `<p style="color: red; text-align: center;">Impossible de charger les clients.</p>`;
     }
@@ -67,7 +68,9 @@ async function loadClients(data) {
  */
 function createClientElement(data) {
     // Formatage de la date : 2004-07-24 -> 24/07/2004
-    const [year, month, day] = data.date_naissance.slice(0, text.indexOf("T")).split('-');
+    const [year, month, day] = data.date_naissance.split("T")[0].split("-");
+    
+    // Tu peux maintenant l'afficher au format français :
     const formattedDate = `${day}/${month}/${year}`;
 
     const div = document.createElement('div');
