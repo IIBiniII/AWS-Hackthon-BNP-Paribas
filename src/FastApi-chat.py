@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, Query
+import pandas as pd
 
 # Modèle pour la requête du site web
 class ChatRequest(BaseModel):
@@ -27,7 +28,6 @@ def load_excel_data():
         if not EXCEL_FILE_PATH.exists():
             raise FileNotFoundError(f"Excel file not found: {EXCEL_FILE_PATH}")
         
-        import pandas as pd
         df = pd.read_excel(EXCEL_FILE_PATH)
         return df
     except Exception as e:
@@ -68,7 +68,53 @@ async def lifespan(app: FastAPI):
     # Fermeture propre à l'arrêt
     state["mcp_context"].__exit__(None, None, None)
 
+from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI(lifespan=lifespan)
+
+
+# Configuration du CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],           # Autorise ton site web à accéder à l'API
+    allow_credentials=True,
+    allow_methods=["*"],           # Autorise POST, OPTIONS, GET, etc.
+    allow_headers=["*"],           # Autorise les headers comme Content-Type
+)
+
+@app.get("/client/accounts")
+def get_client_accounts(client_id: str, sheet_name: str = "04_Contrats_Produits"):
+    # 1. Vérification de la source de données
+    df = pd.read_excel(EXCEL_FILE_PATH,sheet_name=None)
+
+    if df is None:
+        raise HTTPException(status_code=500, detail="Base de données non chargée")
+    print(df.keys())
+    if sheet_name not in df:
+        raise HTTPException(status_code=404, detail=f"Feuille '{sheet_name}' introuvable")
+
+    df_accounts = df[sheet_name]
+    
+    try:
+        # 2. Filtrage (le astype(str) est vital si l'ID est numérique dans Excel)
+        mask = df_accounts['client_id'].astype(str) == str(client_id)
+        accounts = df_accounts[mask].copy() # .copy() pour éviter les warnings Pandas
+        
+        if accounts.empty:
+            return [] # Un tableau vide est plus facile à gérer pour le frontend qu'un message d'erreur
+
+        # 3. Nettoyage des types pour JSON
+        # Conversion des colonnes de dates en strings (format ISO)
+        for col in accounts.select_dtypes(include=['datetime64']).columns:
+            accounts[col] = accounts[col].dt.strftime('%Y-%m-%d')
+            
+        # 4. Gestion des NaN (Not a Number) qui font planter le JSON standard
+        # On remplace les NaN par None (qui devient null en JSON)
+        return accounts.where(pd.notnull(accounts), None).to_dict(orient="records")
+        
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=f"La colonne {e} est absente de la feuille")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur interne : {str(e)}")
 
 @app.get("/clients/search")
 async def search_clients(
@@ -115,6 +161,50 @@ async def search_clients(
         "clients": final_data
     }
 
+from typing import List, Dict, Any
+
+@app.get("/client/events")
+def get_client_events(client_id: str, sheet_name: str = "11_Evenements_Interact"):
+    """
+    Récupère les 5 derniers événements/interactions d'un client, triés par date décroissante.
+    """
+    df = pd.read_excel(EXCEL_FILE_PATH,sheet_name=None)
+
+    if df is None:
+        raise HTTPException(status_code=500, detail="Base de données non initialisée")
+    
+    if sheet_name not in df:
+        raise HTTPException(status_code=404, detail=f"Feuille '{sheet_name}' introuvable")
+
+    df_events = df[sheet_name]
+    
+    try:
+        # 1. Filtrage par client_id
+        mask = df_events['client_id'].astype(str) == str(client_id)
+        events = df_events[mask].copy()
+        
+        if events.empty:
+            return []
+
+        # 2. Conversion de la colonne 'date' en format datetime pour assurer un tri correct
+        if 'date' in events.columns:
+            events['date'] = pd.to_datetime(events['date'])
+            # Tri : du plus récent au plus ancien
+            events = events.sort_values(by='date', ascending=False)
+            # Conversion en string pour le JSON après le tri
+            events['date'] = events['date'].dt.strftime('%Y-%m-%d %H:%M')
+
+        # 3. Récupération des 5 premiers (les plus récents suite au tri)
+        latest_events = events.head(5)
+
+        # 4. Nettoyage des NaN pour le JSON
+        return latest_events.where(pd.notnull(latest_events), None).to_dict(orient="records")
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la récupération des événements : {str(e)}")
+    
+    
+
 @app.post("/chat")
 async def chat(request: ChatRequest):
     if "agent" not in state:
@@ -122,8 +212,12 @@ async def chat(request: ChatRequest):
     
     try:
         # Utilisation de la méthode chat() (ou run_sync selon votre version de strands)
-        response = state["agent"].chat(request.message)
-        return {"response": response}
+        response = state["agent"](request.message)
+        print(response)
+        prompt = response
+        response2 = state["agent"](prompt)
+
+        return {"response": response2}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -197,6 +197,39 @@ def get_sample_data() -> dict:
     sample = customers_data.head(5).to_dict(orient='records')
     return {"sample": sample}
 
+@mcp.tool()
+def get_client_accounts(client_id: str, sheet_name: str = "04_Contrats_Produits") -> list[dict]:
+    """
+    Récupère la liste de tous les comptes/contrats associés à un identifiant client.
+    
+    Args:
+        client_id: L'identifiant unique du client.
+        sheet_name: Le nom de la feuille contenant les données de comptes (par défaut '04_Contrats_Produits').
+    
+    Returns:
+        list[dict]: Liste des comptes avec détails (contrat_id, libelle_produit, encours_eur, etc.)
+    """
+    if customers_data is None or sheet_name not in customers_data:
+        return [{"error": f"La feuille '{sheet_name}' est introuvable dans le fichier Excel."}]
+
+    df_accounts = customers_data[sheet_name]
+    
+    try:
+        # Filtrage par client_id (conversion en string pour la robustesse)
+        mask = df_accounts['client_id'].astype(str) == str(client_id)
+        accounts = df_accounts[mask]
+        
+        if accounts.empty:
+            return [{"message": f"Aucun compte trouvé pour le client ID {client_id}."}]
+        
+        # Retourne l'ensemble des colonnes demandées converties en dictionnaire
+        return accounts.to_dict(orient="records")
+        
+    except KeyError as e:
+        return [{"error": f"La colonne obligatoire '{e}' est manquante dans la feuille '{sheet_name}'."}]
+    except Exception as e:
+        return [{"error": f"Une erreur est survenue : {str(e)}"}]
+    
 
 # Start the MCP server
 if __name__ == "__main__":

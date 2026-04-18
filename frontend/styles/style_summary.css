@@ -107,6 +107,23 @@ aside .bottom button {
     font-weight: bold;
 }
 
+.answer {
+    /* 1. Fixer une hauteur ou laisser l'espace disponible */
+    height: 400px; /* Ou flex: 1; si le parent est un flexbox */
+    
+    /* 2. Activer le scroll vertical uniquement si le contenu dépasse */
+    overflow-y: auto;
+    
+    /* 3. Optionnel : Design pour la lisibilité */
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    
+    /* Pour éviter que le texte ne colle aux bords lors du scroll */
+    word-wrap: break-word; 
+}
+
 /* Effet au survol des boutons */
 button:hover {
     filter: brightness(1.1);
