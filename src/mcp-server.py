@@ -25,7 +25,7 @@ def load_excel_data():
             raise FileNotFoundError(f"Excel file not found: {EXCEL_FILE_PATH}")
         
         import pandas as pd
-        df = pd.read_excel(EXCEL_FILE_PATH)
+        df = pd.read_excel(EXCEL_FILE_PATH,sheet_name=None)
         logger.info(f"Successfully loaded {len(df)} customer records")
         return df
     except Exception as e:
@@ -34,11 +34,29 @@ def load_excel_data():
 # Load data on server initialization
 try:
     customers_data = load_excel_data()
+    print("Feuilles :",customers_data.keys())
 except FileNotFoundError as e:
     logger.error(f"Server initialization failed: {e}")
     customers_data = None
 
     
+@mcp.tool()
+def list_sheets() -> list[str]:
+    """
+    Récupère l'ensemble des noms des feuilles du fichier Excel chargé.
+    
+    Returns:
+        list: Une liste contenant les noms de toutes les feuilles disponibles.
+    """
+    if customers_data is None:
+        return ["Erreur : Aucune donnée n'est chargée."]
+    
+    # Si customers_data est un dictionnaire (chargé avec sheet_name=None)
+    if isinstance(customers_data, dict):
+        return list(customers_data.keys())
+    
+    # Si c'est un DataFrame unique (cas où une seule feuille a été chargée)
+    return ["Feuille unique (données chargées par défaut)"]
 
 
 
@@ -117,6 +135,52 @@ def list_data_fields() -> dict:
         return {"error": "Data not loaded", "message": "Excel file could not be loaded"}
     
     return {"fields": customers_data.columns.tolist()}
+
+@mcp.tool()
+def get_sheet_columns(sheet_name: str) -> list[str]:
+    """
+    Récupère le nom de toutes les colonnes (headers) pour une feuille spécifique.
+    
+    Args:
+        sheet_name: Le nom de l'onglet Excel à analyser.
+    """
+    if customers_data is None or sheet_name not in customers_data:
+        return [f"Erreur : La feuille '{sheet_name}' est introuvable."]
+    
+    return list(customers_data[sheet_name].columns)
+
+@mcp.tool()
+def search_in_sheet(sheet_name: str, filters: dict) -> list[dict]:
+    """
+    Recherche des lignes dans une feuille spécifique en fonction de plusieurs critères.
+    
+    Args:
+        sheet_name: Le nom de l'onglet où chercher.
+        filters: Un dictionnaire {nom_colonne: valeur} pour filtrer les données.
+                 Exemple: {"nom": "Dupont", "ville": "Lyon"}
+    """
+    if customers_data is None or sheet_name not in customers_data:
+        return [{"error": f"Feuille '{sheet_name}' introuvable"}]
+
+    df = customers_data[sheet_name].copy()
+    
+    try:
+        # Appliquer chaque filtre dynamiquement
+        for column, value in filters.items():
+            if column in df.columns:
+                # Filtrage insensible à la casse pour les chaînes de caractères
+                if isinstance(value, str):
+                    df = df[df[column].astype(str).str.contains(value, case=False, na=False)]
+                else:
+                    df = df[df[column] == value]
+            else:
+                return [{"error": f"La colonne '{column}' n'existe pas dans '{sheet_name}'"}]
+        
+        # Retourne les 20 premiers résultats pour éviter de saturer l'IA
+        return df.head(20).to_dict(orient="records")
+        
+    except Exception as e:
+        return [{"error": f"Erreur lors de la recherche : {str(e)}"}]
 
 
 @mcp.tool()
