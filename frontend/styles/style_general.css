@@ -1,0 +1,51 @@
+/* Styles globaux */
+:root{
+    --background : #FCF9F4;
+    --white : #FFFFFF;
+    --BNPgreen : #008A5A;
+    --black : #142026;
+}
+
+body {
+    background-color: var(--background); /* Fond beige très clair */
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 40px;
+    color: var(--black);
+}
+
+/* Header */
+header {
+    background: var(--white);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 30px;
+    border-radius: 25px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+header .brand {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+header img {
+    height: 40px;
+}
+
+header button {
+    background-color: var(--BNPgreen); /* Vert BNP */
+    color: var(--white);
+    border: none;
+    padding: 10px 25px;
+    border-radius: 30px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 1.1rem;
+}
