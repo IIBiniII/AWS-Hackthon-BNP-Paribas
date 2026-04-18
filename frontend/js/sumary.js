@@ -93,3 +93,17 @@ document.querySelector('header button').addEventListener('click', () => {
 
 // Lancement au chargement du DOM
 document.addEventListener('DOMContentLoaded', initDashboard);
+
+function setupActionButtons() {
+    // On cible le bouton qui contient le texte "Reste" (ou "Reset")
+    const resetBtn = document.querySelector('header button');
+
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            // Recharge la page actuelle
+            window.location.href="http://127.0.0.1:5500/frontend/index.html"
+        });
+    }
+}
+
+setupActionButtons(); // La nouvelle fonction
